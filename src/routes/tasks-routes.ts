@@ -12,10 +12,10 @@ const tasksUpdatesController = new TasksUpdatesController()
 tasksRoutes.use(ensureAuthenticated)
 
 tasksRoutes.post("/", verifyUserAuthorization(["admin"]), tasksController.create)
-tasksRoutes.delete("/:id", verifyUserAuthorization(["admin"]), tasksController.remove)
 tasksRoutes.get("/", checkUserTeam, tasksController.index)
 tasksRoutes.get("/:id", checkUserTeam, tasksController.show)
 tasksRoutes.put("/:id", checkUserTeam, tasksController.update)
+tasksRoutes.delete("/:id", verifyUserAuthorization(["admin"]), tasksController.remove)
 
 tasksRoutes.patch("/:id/assigned-to", verifyUserAuthorization(["admin"]), tasksUpdatesController.assignedToUpdate)
 tasksRoutes.patch("/:id/status", checkUserTeam, tasksUpdatesController.statusUpdate)

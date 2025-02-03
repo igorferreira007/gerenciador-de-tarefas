@@ -2,8 +2,9 @@ import express from "express"
 import "express-async-errors"
 import { router } from "./routes"
 import { errorHandling } from "./middlewares/error-handling"
+import { env } from "./env"
 
-const PORT = 3333
+const PORT = env.PORT
 const app = express()
 
 app.use(express.json())
