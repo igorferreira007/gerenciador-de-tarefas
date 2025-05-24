@@ -7,7 +7,7 @@ export class TeamsController {
   async create(request: Request, response: Response) {
     const bodySchema = z.object({
       name: z.string().trim().min(1),
-      description: z.string()
+      description: z.string(),
     })
 
     const { name, description } = bodySchema.parse(request.body)
@@ -21,8 +21,8 @@ export class TeamsController {
     await prisma.team.create({
       data: {
         name,
-        description
-      }
+        description,
+      },
     })
 
     return response.status(201).json()
@@ -31,23 +31,27 @@ export class TeamsController {
   async index(request: Request, response: Response) {
     const querySchema = z.object({
       name: z.string().optional(),
-      description: z.string().optional()
+      description: z.string().optional(),
     })
 
     const { name, description } = querySchema.parse(request.query)
 
-    const teams = await prisma.team.findMany({ 
+    const teams = await prisma.team.findMany({
       where: {
         name: {
           contains: name,
-          mode: "insensitive"
+          mode: "insensitive",
         },
         description: {
           contains: description,
-          mode: "insensitive"
-        }
+          mode: "insensitive",
+        },
       },
-      orderBy: { name: "asc" } 
+      orderBy: { name: "asc" },
+      include: {
+        teamMembers: true,
+        tasks: true,
+      },
     })
 
     return response.json(teams)
@@ -55,12 +59,15 @@ export class TeamsController {
 
   async show(request: Request, response: Response) {
     const paramsSchema = z.object({
-      id: z.string().uuid()
+      id: z.string().uuid(),
     })
 
     const { id } = paramsSchema.parse(request.params)
 
-    const team = await prisma.team.findFirst({ where: { id } })
+    const team = await prisma.team.findFirst({
+      where: { id },
+      include: { teamMembers: { include: { user: true } }, tasks: true },
+    })
 
     if (!team) {
       throw new AppError("Essa equipe não existe")
@@ -71,12 +78,12 @@ export class TeamsController {
 
   async update(request: Request, response: Response) {
     const paramsSchema = z.object({
-      id: z.string().uuid()
+      id: z.string().uuid(),
     })
 
     const bodySchema = z.object({
       name: z.string().trim().min(1).optional(),
-      description: z.string().trim().optional()
+      description: z.string().trim().optional(),
     })
 
     const { id } = paramsSchema.parse(request.params)
@@ -93,8 +100,8 @@ export class TeamsController {
       where: { id },
       data: {
         name,
-        description
-      }
+        description,
+      },
     })
 
     return response.json()
@@ -102,7 +109,7 @@ export class TeamsController {
 
   async remove(request: Request, response: Response) {
     const paramsSchema = z.object({
-      id: z.string().uuid()
+      id: z.string().uuid(),
     })
 
     const { id } = paramsSchema.parse(request.params)
