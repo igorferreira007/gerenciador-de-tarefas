@@ -7,7 +7,7 @@ export class TeamMembersController {
   async create(request: Request, response: Response) {
     const bodySchema = z.object({
       user_id: z.string().uuid(),
-      team_id: z.string().uuid()
+      team_id: z.string().uuid(),
     })
 
     const { user_id, team_id } = bodySchema.parse(request.body)
@@ -24,7 +24,9 @@ export class TeamMembersController {
       throw new AppError("Essa equipe não existe")
     }
 
-    const userWithTeam = await prisma.teamMember.findFirst({ where: { userId: user_id } })
+    const userWithTeam = await prisma.teamMember.findFirst({
+      where: { userId: user_id },
+    })
 
     if (userWithTeam) {
       throw new AppError("Esse usuário já pertence a uma equipe")
@@ -33,8 +35,8 @@ export class TeamMembersController {
     await prisma.teamMember.create({
       data: {
         userId: user_id,
-        teamId: team_id
-      }
+        teamId: team_id,
+      },
     })
 
     return response.status(201).json()
@@ -43,7 +45,7 @@ export class TeamMembersController {
   async index(request: Request, response: Response) {
     const querySchema = z.object({
       teamName: z.string().trim().optional(),
-      userName: z.string().trim().optional()
+      userName: z.string().trim().optional(),
     })
 
     const { teamName, userName } = querySchema.parse(request.query)
@@ -51,26 +53,31 @@ export class TeamMembersController {
     const teamMembers = await prisma.teamMember.findMany({
       include: {
         team: {
-          select: { name: true }
+          select: { name: true },
         },
         user: {
-          select: { name: true }
-        }
+          select: {
+            name: true,
+            email: true,
+            role: true,
+            createdAt: true,
+          },
+        },
       },
       where: {
         team: {
           name: {
             contains: teamName?.toString(),
-            mode: "insensitive"
-          }
+            mode: "insensitive",
+          },
         },
         user: {
           name: {
             contains: userName?.toString(),
-            mode: "insensitive"
-          }
-        }
-      }
+            mode: "insensitive",
+          },
+        },
+      },
     })
 
     if (!teamMembers) {
@@ -82,7 +89,7 @@ export class TeamMembersController {
 
   async show(request: Request, response: Response) {
     const paramsSchema = z.object({
-      id: z.string().uuid()
+      id: z.string().uuid(),
     })
 
     const { id } = paramsSchema.parse(request.params)
@@ -91,12 +98,12 @@ export class TeamMembersController {
       where: { id },
       include: {
         team: {
-          select: { name: true }
+          select: { name: true },
         },
         user: {
-          select: { name: true }
-        }
-      }
+          select: { name: true },
+        },
+      },
     })
 
     if (!teamMember) {
@@ -108,7 +115,7 @@ export class TeamMembersController {
 
   async remove(request: Request, response: Response) {
     const paramsSchema = z.object({
-      id: z.string().uuid()
+      id: z.string().uuid(),
     })
 
     const { id } = paramsSchema.parse(request.params)
