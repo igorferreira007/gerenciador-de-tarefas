@@ -1,5 +1,6 @@
 import { prisma } from "@/database/prisma"
 import { AppError } from "@/utils/AppError"
+import { Prisma } from "@prisma/client"
 import { Request, Response } from "express"
 import z from "zod"
 
@@ -47,31 +48,26 @@ export class TasksController {
       status: z.enum(["pending", "inProgress", "completed"]).optional(),
       title: z.string().trim().optional(),
       userName: z.string().trim().optional(),
+      page: z.coerce.number().optional().default(1),
+      perPage: z.coerce.number().optional().default(10),
     })
 
-    const { priority, status, title, userName } = querySchema.parse(
-      request.query
-    )
+    const { priority, status, title, userName, page, perPage } =
+      querySchema.parse(request.query)
+
+    const skip = (page - 1) * perPage
+
+    const filters: Prisma.TaskWhereInput = {
+      ...(priority && { priority }),
+      ...(status && { status }),
+      ...(title && { title: { contains: title, mode: "insensitive" } }),
+      ...(role !== "admin" && teamId && { teamId }),
+    }
 
     const tasks = await prisma.task.findMany({
-      where: {
-        priority: {
-          equals: priority,
-        },
-        status: {
-          equals: status,
-        },
-        title: {
-          contains: title?.toString(),
-          mode: "insensitive",
-        },
-        // user: {
-        //   name: {
-        //     contains: userName?.toString(),
-        //     mode: "insensitive",
-        //   },
-        // },
-      },
+      skip,
+      take: perPage,
+      where: filters,
       include: {
         user: {
           select: {
@@ -84,15 +80,24 @@ export class TasksController {
           },
         },
       },
+      orderBy: { createdAt: "desc" },
     })
 
-    if (role !== "admin") {
-      const teamTasks = tasks.filter((task) => task.teamId === teamId)
+    const totalRecords = await prisma.task.count({
+      where: filters,
+    })
 
-      return response.json(teamTasks)
-    }
+    const totalPages = Math.ceil(totalRecords / perPage)
 
-    return response.json(tasks)
+    return response.json({
+      tasks,
+      pagination: {
+        page,
+        perPage,
+        totalRecords,
+        totalPages: totalPages > 0 ? totalPages : 1,
+      },
+    })
   }
 
   async show(request: Request, response: Response) {
