@@ -114,7 +114,10 @@ export class TasksController {
 
     const { id } = paramsSchema.parse(request.params)
 
-    const task = await prisma.task.findFirst({ where: { id } })
+    const task = await prisma.task.findFirst({
+      where: { id },
+      include: { team: true, user: true },
+    })
 
     if (!task) {
       throw new AppError("Essa tarefa não existe")
