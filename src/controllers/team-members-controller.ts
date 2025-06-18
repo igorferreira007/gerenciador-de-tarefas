@@ -46,9 +46,10 @@ export class TeamMembersController {
     const querySchema = z.object({
       teamName: z.string().trim().optional(),
       userName: z.string().trim().optional(),
+      teamId: z.string().trim().optional(),
     })
 
-    const { teamName, userName } = querySchema.parse(request.query)
+    const { teamName, userName, teamId } = querySchema.parse(request.query)
 
     const teamMembers = await prisma.teamMember.findMany({
       include: {
@@ -70,6 +71,7 @@ export class TeamMembersController {
             contains: teamName?.toString(),
             mode: "insensitive",
           },
+          id: teamId,
         },
         user: {
           name: {
