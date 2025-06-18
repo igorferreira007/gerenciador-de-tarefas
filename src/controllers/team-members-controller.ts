@@ -46,7 +46,7 @@ export class TeamMembersController {
     const querySchema = z.object({
       teamName: z.string().trim().optional(),
       userName: z.string().trim().optional(),
-      teamId: z.string().trim().optional(),
+      teamId: z.string().optional(),
     })
 
     const { teamName, userName, teamId } = querySchema.parse(request.query)

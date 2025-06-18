@@ -9,7 +9,7 @@ export class TasksController {
     const bodySchema = z.object({
       title: z.string().trim(),
       description: z.string().trim(),
-      priority: z.enum(["low", "medium", "high"]).optional(),
+      priority: z.enum(["low", "medium", "high"]).default("low").optional(),
       team_id: z.string().uuid(),
     })
 
@@ -140,6 +140,9 @@ export class TasksController {
     const bodySchema = z.object({
       title: z.string().trim().optional(),
       description: z.string().trim().optional(),
+      priority: z.enum(["low", "medium", "high"]).optional(),
+      team_id: z.string().uuid().optional(),
+      assigned_to: z.string().uuid().nullable().optional(),
     })
 
     const userSchema = z.object({
@@ -148,7 +151,9 @@ export class TasksController {
     })
 
     const { id } = paramsSchema.parse(request.params)
-    const { title, description } = bodySchema.parse(request.body)
+    const { title, description, priority, team_id, assigned_to } =
+      bodySchema.parse(request.body)
+
     const { id: userId, role } = userSchema.parse(request.user)
 
     const task = await prisma.task.findFirst({ where: { id } })
@@ -168,6 +173,9 @@ export class TasksController {
       data: {
         title,
         description,
+        priority,
+        teamId: team_id,
+        assignedTo: assigned_to,
       },
       where: {
         id,
