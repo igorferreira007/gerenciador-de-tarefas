@@ -7,6 +7,7 @@ export class TasksLogsController {
   async index(request: Request, response: Response) {
     const querySchema = z.object({
       taskId: z.string().uuid().optional(),
+      title: z.string().optional(),
     })
 
     const userSchema = z.object({
@@ -14,7 +15,7 @@ export class TasksLogsController {
       teamId: z.string().uuid().optional(),
     })
 
-    const { taskId } = querySchema.parse(request.query)
+    const { taskId, title } = querySchema.parse(request.query)
     const { role, teamId } = userSchema.parse(request.user)
 
     const taskHistory = await prisma.taskHistory.findMany({
@@ -22,6 +23,12 @@ export class TasksLogsController {
         taskId: {
           contains: taskId?.toString().trim(),
           mode: "insensitive",
+        },
+        task: {
+          title: {
+            contains: title?.toString().trim(),
+            mode: "insensitive",
+          },
         },
       },
       include: {
