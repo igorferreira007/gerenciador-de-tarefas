@@ -1,6 +1,6 @@
 import { prisma } from "@/database/prisma"
 import { AppError } from "@/utils/AppError"
-import { hash } from "bcrypt"
+import { compare, hash } from "bcrypt"
 import { NextFunction, Request, Response } from "express"
 import { z } from "zod"
 
@@ -9,9 +9,9 @@ export class UsersController {
     const bodySchema = z.object({
       name: z.string().trim().min(1),
       email: z.string().email(),
-      password: z.string().trim().min(6)
+      password: z.string().trim().min(6),
     })
-    
+
     const { name, email, password } = bodySchema.parse(request.body)
 
     const userExists = await prisma.user.findFirst({ where: { email } })
@@ -23,9 +23,9 @@ export class UsersController {
     const hashedPassword = await hash(password, 8)
 
     await prisma.user.create({
-      data: { name, email, password: hashedPassword }
+      data: { name, email, password: hashedPassword },
     })
-    
+
     return response.status(201).json()
   }
 
@@ -33,7 +33,7 @@ export class UsersController {
     const querySchema = z.object({
       name: z.string().optional(),
       email: z.string().email().optional(),
-      role: z.enum(["admin", "member"]).optional()
+      role: z.enum(["admin", "member"]).optional(),
     })
 
     const { name, email, role } = querySchema.parse(request.query)
@@ -42,24 +42,24 @@ export class UsersController {
       where: {
         name: {
           contains: name?.toString().trim(),
-          mode: "insensitive"
+          mode: "insensitive",
         },
         email: {
           contains: email?.toString().trim(),
-          mode: "insensitive"
+          mode: "insensitive",
         },
         role: {
-          equals: role
-        }
+          equals: role,
+        },
       },
       orderBy: {
-        name: "asc"
-      }
+        name: "asc",
+      },
     })
 
-    const usersWithoutPassword = users.map(user => {
+    const usersWithoutPassword = users.map((user) => {
       const { password, ...otherUserProps } = user
-      
+
       return otherUserProps
     })
 
@@ -68,7 +68,7 @@ export class UsersController {
 
   async show(request: Request, response: Response) {
     const paramsSchema = z.object({
-      id: z.string().uuid()
+      id: z.string().uuid(),
     })
 
     const { id } = paramsSchema.parse(request.params)
@@ -86,42 +86,64 @@ export class UsersController {
 
   async update(request: Request, response: Response) {
     const paramsSchema = z.object({
-      id: z.string().uuid()
+      id: z.string().uuid(),
     })
 
     const bodySchema = z.object({
       name: z.string().trim().min(1).optional(),
       email: z.string().email().optional(),
       password: z.string().trim().min(6).optional(),
-      role: z.enum(["admin", "member"]).optional()
+      old_password: z.string().trim().min(6).optional(),
     })
 
+    const { name, email, password, old_password } = bodySchema.parse(
+      request.body
+    )
     const { id } = paramsSchema.parse(request.params)
-    
+
     const user = await prisma.user.findFirst({ where: { id } })
-    
+
     if (!user) {
       throw new AppError("Esse usuário não existe")
     }
 
-    const { name, email, password, role } = bodySchema.parse(request.body)
+    let emailAlreadyUsed
+
+    if (email) {
+      emailAlreadyUsed = await prisma.user.findFirst({ where: { email } })
+    }
+
+    if (emailAlreadyUsed && emailAlreadyUsed.id !== user.id) {
+      throw new AppError("Este email já está em uso.")
+    }
 
     let hashedPassword
 
-    if (password) {
+    if (password && !old_password) {
+      throw new AppError(
+        "Você precisa informar a senha antiga para definir a nova senha"
+      )
+    }
+
+    if (password && old_password) {
+      const checkOldPassword = await compare(old_password, user.password)
+
+      if (!checkOldPassword) {
+        throw new AppError("A senha antiga está incorreta.")
+      }
+
       hashedPassword = await hash(password, 8)
     }
-    
+
     await prisma.user.update({
       data: {
         name,
         email,
         password: hashedPassword,
-        role
       },
       where: {
-        id
-      }
+        id,
+      },
     })
 
     return response.json()
@@ -129,13 +151,13 @@ export class UsersController {
 
   async remove(request: Request, response: Response) {
     const paramsSchema = z.object({
-      id: z.string().uuid()
+      id: z.string().uuid(),
     })
 
     const { id } = paramsSchema.parse(request.params)
-    
+
     const user = await prisma.user.findFirst({ where: { id } })
-    
+
     if (!user) {
       throw new AppError("Esse usuário não existe")
     }
