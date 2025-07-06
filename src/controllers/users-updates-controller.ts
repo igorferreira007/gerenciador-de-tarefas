@@ -1,7 +1,10 @@
 import { prisma } from "@/database/prisma"
 import { AppError } from "@/utils/AppError"
 import { Request, Response } from "express"
-import z from "zod"
+import z, { ZodError } from "zod"
+
+import uploadConfig from "@/configs/upload"
+import { DiskStorage } from "@/providers/disk-storage"
 
 export class UsersUpdatesController {
   async roleUpdate(request: Request, response: Response) {
@@ -33,5 +36,51 @@ export class UsersUpdatesController {
     })
 
     return response.json()
+  }
+
+  async userAvatarUpdate(request: Request, response: Response) {
+    const diskStorage = new DiskStorage()
+
+    try {
+      const fileSchema = z
+        .object({
+          filename: z.string().min(1, "O arquivo é obrigatório."),
+          mimetype: z
+            .string()
+            .refine(
+              (type) => uploadConfig.ACCEPTED_IMAGE_TYPES.includes(type),
+              `Formato de arquivo inválido. Formatos permitidos: ${uploadConfig.ACCEPTED_IMAGE_TYPES}`
+            ),
+          size: z
+            .number()
+            .positive()
+            .refine(
+              (size) => size <= uploadConfig.MAX_FILE_SIZE,
+              `O arquivo excede o tamanho máximo de ${uploadConfig.MAX_SIZE}MB`
+            ),
+        })
+        .passthrough()
+
+      const user_id = request.user?.id
+      const file = fileSchema.parse(request.file)
+      const filename = await diskStorage.saveFile(file.filename)
+
+      await prisma.user.update({
+        where: { id: user_id },
+        data: { avatar: filename },
+      })
+
+      return response.json({ filename })
+    } catch (error) {
+      if (error instanceof ZodError) {
+        if (request.file) {
+          await diskStorage.deleteFile(request.file.filename, "tmp")
+        }
+
+        throw new AppError(error.issues[0].message)
+      }
+
+      throw error
+    }
   }
 }
