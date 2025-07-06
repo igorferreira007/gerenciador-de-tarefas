@@ -99,6 +99,7 @@ export class UsersController {
     const { name, email, password, old_password } = bodySchema.parse(
       request.body
     )
+
     const { id } = paramsSchema.parse(request.params)
 
     const user = await prisma.user.findFirst({ where: { id } })
@@ -119,10 +120,18 @@ export class UsersController {
 
     let hashedPassword
 
-    if (password && !old_password) {
-      throw new AppError(
-        "Você precisa informar a senha antiga para definir a nova senha"
-      )
+    if (password || old_password) {
+      if (password && !old_password) {
+        throw new AppError(
+          "Você precisa informar a senha antiga para definir a nova senha"
+        )
+      }
+
+      if (!password || !old_password) {
+        throw new AppError(
+          "Você deve preencher a senha atual e a nova, para conseguir alterar."
+        )
+      }
     }
 
     if (password && old_password) {
