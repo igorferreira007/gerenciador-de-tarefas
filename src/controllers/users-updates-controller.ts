@@ -65,10 +65,18 @@ export class UsersUpdatesController {
       const file = fileSchema.parse(request.file)
       const filename = await diskStorage.saveFile(file.filename)
 
+      const oldAvatar = await prisma.user.findFirst({
+        where: { id: user_id },
+      })
+
       const user = await prisma.user.update({
         where: { id: user_id },
         data: { avatar: filename },
       })
+
+      if (oldAvatar?.avatar) {
+        await diskStorage.deleteFile(oldAvatar.avatar, "upload")
+      }
 
       const { password, ...userWithoutPassword } = user
 
