@@ -65,12 +65,14 @@ export class UsersUpdatesController {
       const file = fileSchema.parse(request.file)
       const filename = await diskStorage.saveFile(file.filename)
 
-      await prisma.user.update({
+      const user = await prisma.user.update({
         where: { id: user_id },
         data: { avatar: filename },
       })
 
-      return response.json({ filename })
+      const { password, ...userWithoutPassword } = user
+
+      return response.json(userWithoutPassword)
     } catch (error) {
       if (error instanceof ZodError) {
         if (request.file) {
