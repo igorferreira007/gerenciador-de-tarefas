@@ -72,6 +72,7 @@ export class TasksController {
         user: {
           select: {
             name: true,
+            avatar: true,
           },
         },
         team: {
