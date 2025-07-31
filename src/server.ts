@@ -9,7 +9,20 @@ import uploadConfig from "./configs/upload"
 const PORT = env.PORT
 const app = express()
 
-app.use(cors({ origin: "http://localhost:5173", credentials: true }))
+const allowedOrigins = ["http://localhost:5173", "https://taskger.vercel.app"]
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true)
+      } else {
+        callback(new Error("Not allowed by CORS"))
+      }
+    },
+    credentials: true,
+  })
+)
 app.use(express.json())
 app.use("/uploads", express.static(uploadConfig.UPLOADS_FOLDER))
 app.use(router)
