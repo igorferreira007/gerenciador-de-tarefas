@@ -9,7 +9,11 @@ import uploadConfig from "./configs/upload"
 const PORT = env.PORT
 const app = express()
 
-const allowedOrigins = ["http://localhost:5173", "https://taskger.vercel.app"]
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://taskger.vercel.app",
+  "https://taskger-8nkzcl15p-igors-projects-cf0d5339.vercel.app",
+]
 
 app.use(
   cors({
